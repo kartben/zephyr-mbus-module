@@ -17,7 +17,6 @@ jobs:
       - name: Initialize
         run: |
           pwd
-          sudo apt install binutils-arm-none-eabi
           pip3 install -U west
           west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.1.0
           west update
