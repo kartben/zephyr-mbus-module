@@ -12,8 +12,8 @@
 //------------------------------------------------------------------------------
 
 #include "mbus-protocol-aux.h"
-#include "mbus-serial.h"
-#include "mbus-tcp.h"
+//#include "mbus-serial.h"
+//#include "mbus-tcp.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -1489,7 +1489,7 @@ mbus_frame_data_xml_normalized(mbus_frame_data *data)
 
     return NULL;
 }
-
+#if 0
 mbus_handle *
 mbus_context_serial(const char *device)
 {
@@ -1586,7 +1586,7 @@ mbus_context_tcp(const char *host, uint16_t port)
 
     return handle;
 }
-
+#endif
 void
 mbus_context_free(mbus_handle * handle)
 {
