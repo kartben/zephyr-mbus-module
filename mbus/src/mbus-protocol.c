@@ -4461,7 +4461,7 @@ void
 mbus_hex_dump(const char *label, const char *buff, size_t len)
 {
     time_t rawtime;
-    struct tm * timeinfo;
+    struct tm * tm;
     char timestamp[22];
     size_t i;
 
@@ -4469,9 +4469,10 @@ mbus_hex_dump(const char *label, const char *buff, size_t len)
         return;
 
     time ( &rawtime );
-    timeinfo = gmtime ( &rawtime );
+    tm = gmtime ( &rawtime );
 
-    strftime(timestamp,21,"%Y-%m-%d %H:%M:%SZ",timeinfo);
+    snprintf(timestamp, sizeof(timestamp), "%d-%d-%d %d:%d:%dZ",
+	     tm->tm_year + 1900, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
     fprintf(stderr, "[%s] %s (%03zu):", timestamp, label, len);
 
     for (i = 0; i < len; i++)
@@ -4609,7 +4610,7 @@ mbus_data_variable_record_xml(mbus_data_record *record, int record_cnt, int fram
     static char buff[8192];
     char str_encoded[768];
     size_t len = 0;
-    struct tm * timeinfo;
+    struct tm * tm;
     char timestamp[22];
     long tariff;
 
@@ -4665,8 +4666,9 @@ mbus_data_variable_record_xml(mbus_data_record *record, int record_cnt, int fram
 
         if (record->timestamp > 0)
         {
-            timeinfo = gmtime (&(record->timestamp));
-            strftime(timestamp,21,"%Y-%m-%dT%H:%M:%SZ",timeinfo);
+            tm = gmtime (&(record->timestamp));
+	    snprintf(timestamp, sizeof(timestamp), "%d-%d-%dT%d:%d:%dZ",
+		     tm->tm_year + 1900, tm->tm_mon, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
             len += snprintf(&buff[len], sizeof(buff) - len,
                             "        <Timestamp>%s</Timestamp>\n", timestamp);
         }
