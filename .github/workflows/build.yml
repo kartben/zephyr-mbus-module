@@ -1,0 +1,38 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:latest
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: example-application
+
+      - name: Initialize
+        run: |
+          pwd
+          sudo apt install binutils-arm-none-eabi
+          pip3 install -U west
+          west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.1.0
+          west update
+          west zephyr-export
+          pip3 install -r zephyr/scripts/requirements.txt
+          pip3 install -r nrf/scripts/requirements.txt
+          pip3 install -r bootloader/mcuboot/scripts/requirements.txt
+
+      - name: Build firmware
+        working-directory: example-application
+        run: |
+          west build -c -b qemu_cortex_m3
+
+      - name: Archive firmware
+        uses: actions/upload-artifact@v2
+        with:
+          name: firmware
+          path: build/zephyr/zephyr.*
