@@ -26,7 +26,6 @@ jobs:
           pip3 install -r bootloader/mcuboot/scripts/requirements.txt
 
       - name: Build firmware
-        working-directory: example-application
         run: |
           west build -c -b qemu_cortex_m3
 
