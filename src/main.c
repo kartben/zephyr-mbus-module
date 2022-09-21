@@ -4,16 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* hello world example: calling functions from a static library */
-
-
 #include <zephyr/zephyr.h>
 #include <stdio.h>
 
-#include <mylib.h>
+#include <mbus.h>
 
 void main(void)
 {
 	printf("Hello World!\n");
-	mylib_hello_world();
+	mbus_init();
 }

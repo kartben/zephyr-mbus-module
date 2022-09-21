@@ -28,11 +28,11 @@ include(ExternalProject)
 # Add an external project to be able download and build the third
 # party library. In this case downloading is not necessary as it has
 # been committed to the repository.
-set(mylib_src_dir   ${CMAKE_CURRENT_SOURCE_DIR}/mylib)
-set(mylib_build_dir ${CMAKE_CURRENT_BINARY_DIR}/mylib)
+set(mbus_src_dir   ${CMAKE_CURRENT_SOURCE_DIR}/mbus)
+set(mbus_build_dir ${CMAKE_CURRENT_BINARY_DIR}/mbus)
 
-set(MYLIB_LIB_DIR     ${mylib_build_dir}/lib)
-set(MYLIB_INCLUDE_DIR ${mylib_src_dir}/include)
+set(MBUS_LIB_DIR     ${mbus_build_dir})
+set(MBUS_INCLUDE_DIR ${mbus_src_dir}/include)
 
 if(CMAKE_GENERATOR STREQUAL "Unix Makefiles")
 # https://www.gnu.org/software/make/manual/html_node/MAKE-Variable.html
@@ -42,28 +42,28 @@ set(submake "make")
 endif()
 
 ExternalProject_Add(
-  mylib_project                 # Name for custom target
-  PREFIX     ${mylib_build_dir} # Root dir for entire project
-  SOURCE_DIR ${mylib_src_dir}
-  BINARY_DIR ${mylib_src_dir} # This particular build system is invoked from the root
+  mbus_project                 # Name for custom target
+  PREFIX     ${mbus_build_dir} # Root dir for entire project
+  SOURCE_DIR ${mbus_src_dir}
+  BINARY_DIR ${mbus_src_dir} # This particular build system is invoked from the root
   CONFIGURE_COMMAND ""    # Skip configuring the project, e.g. with autoconf
   BUILD_COMMAND
   ${submake}
-  PREFIX=${mylib_build_dir}
+  PREFIX=${mbus_build_dir}
   CC=${CMAKE_C_COMPILER}
   AR=${CMAKE_AR}
   CFLAGS=${external_project_cflags}
   INSTALL_COMMAND ""      # This particular build system has no install command
-  BUILD_BYPRODUCTS ${MYLIB_LIB_DIR}/libmylib.a
+  BUILD_BYPRODUCTS ${MBUS_LIB_DIR}/libmbus.a
   )
 
 # Create a wrapper CMake library that our app can link with
-add_library(mylib_lib STATIC IMPORTED GLOBAL)
+add_library(mbus_lib STATIC IMPORTED GLOBAL)
 add_dependencies(
-  mylib_lib
-  mylib_project
+  mbus_lib
+  mbus_project
   )
-set_target_properties(mylib_lib PROPERTIES IMPORTED_LOCATION             ${MYLIB_LIB_DIR}/libmylib.a)
-set_target_properties(mylib_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${MYLIB_INCLUDE_DIR})
+set_target_properties(mbus_lib PROPERTIES IMPORTED_LOCATION             ${MBUS_LIB_DIR}/libmbus.a)
+set_target_properties(mbus_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${MBUS_INCLUDE_DIR})
 
-target_link_libraries(app PUBLIC mylib_lib)
+target_link_libraries(app PUBLIC mbus_lib)
