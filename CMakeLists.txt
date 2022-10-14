@@ -65,5 +65,6 @@ add_dependencies(
   )
 set_target_properties(mbus_lib PROPERTIES IMPORTED_LOCATION             ${MBUS_LIB_DIR}/libmbus.a)
 set_target_properties(mbus_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${MBUS_INCLUDE_DIR})
-
+# See https://github.com/zephyrproject-rtos/zephyr/issues/31613
+target_link_libraries(mbus_lib INTERFACE kernel)
 target_link_libraries(app PUBLIC mbus_lib)
