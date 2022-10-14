@@ -1825,6 +1825,7 @@ mbus_send_switch_baudrate_frame(mbus_handle * handle, int address, long baudrate
 
     if (mbus_send_frame(handle, frame) == -1)
     {
+        mbus_frame_free(frame);
         MBUS_ERROR("%s: failed to send mbus frame.\n", __PRETTY_FUNCTION__);
         retval = -1;
     }
@@ -1879,6 +1880,7 @@ mbus_send_application_reset_frame(mbus_handle * handle, int address, int subcode
 
     if (mbus_send_frame(handle, frame) == -1)
     {
+        mbus_frame_free(frame);
         MBUS_ERROR("%s: failed to send mbus frame.\n", __PRETTY_FUNCTION__);
         retval = -1;
     }
@@ -1916,6 +1918,7 @@ mbus_send_request_frame(mbus_handle * handle, int address)
 
     if (mbus_send_frame(handle, frame) == -1)
     {
+        mbus_frame_free(frame);
         MBUS_ERROR("%s: failed to send mbus frame.\n", __PRETTY_FUNCTION__);
         retval = -1;
     }
@@ -1967,6 +1970,7 @@ mbus_send_user_data_frame(mbus_handle * handle, int address, const unsigned char
 
     if (mbus_send_frame(handle, frame) == -1)
     {
+        mbus_frame_free(frame);
         MBUS_ERROR("%s: failed to send mbus frame.\n", __PRETTY_FUNCTION__);
         retval = -1;
     }
