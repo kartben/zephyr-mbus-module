@@ -12,7 +12,7 @@
 //------------------------------------------------------------------------------
 
 #include "mbus-protocol-aux.h"
-//#include "mbus-serial.h"
+#include "mbus-serial.h"
 //#include "mbus-tcp.h"
 
 #include <errno.h>

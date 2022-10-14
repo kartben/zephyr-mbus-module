@@ -36,7 +36,7 @@
 #include "mbus-protocol.h"
 #include "mbus-protocol-aux.h"
 //#include "mbus-tcp.h"
-//#include "mbus-serial.h"
+#include "mbus-serial.h"
 
 #ifdef __cplusplus
 extern "C" {

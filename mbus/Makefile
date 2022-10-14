@@ -8,9 +8,8 @@ PREFIX   ?= .
 LIB_DIR  ?= $(PREFIX)/
 
 CPPFLAGS ?= -Iinclude -MD
-OBJS      = src/mbus.o src/mbus-protocol.o
-#src/mbus-protocol-aux.o
-#src/mbus-serial.o src/mbus-tcp.o
+OBJS      = src/mbus.o src/mbus-protocol.o src/mbus-protocol-aux.o src/mbus-serial.o
+#src/mbus-tcp.o
 #HEADERS   = include/mbus.h include/mbus-protocol.h
 #include/mbus-protocol-aux.h
 #include/mbus-serial.h include/mbus-tcp.h
