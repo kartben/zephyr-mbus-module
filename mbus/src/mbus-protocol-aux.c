@@ -15,6 +15,7 @@
 //#include "mbus-serial.h"
 //#include "mbus-tcp.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -1489,7 +1490,7 @@ mbus_frame_data_xml_normalized(mbus_frame_data *data)
 
     return NULL;
 }
-#if 0
+
 mbus_handle *
 mbus_context_serial(const char *device)
 {
@@ -1499,7 +1500,7 @@ mbus_context_serial(const char *device)
 
     if ((handle = (mbus_handle *) malloc(sizeof(mbus_handle))) == NULL)
     {
-        MBUS_ERROR("%s: Failed to allocate handle.\n", __PRETTY_FUNCTION__);
+        MBUS_ERROR("%s: Failed to allocate handle, error %d\n", __func__, errno);
         return NULL;
     }
 
@@ -1538,6 +1539,7 @@ mbus_context_serial(const char *device)
     return handle;
 }
 
+#if 0
 mbus_handle *
 mbus_context_tcp(const char *host, uint16_t port)
 {
