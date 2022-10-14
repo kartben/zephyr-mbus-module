@@ -2440,7 +2440,7 @@ int
 mbus_scan_2nd_address_range(mbus_handle * handle, int pos, char *addr_mask)
 {
     int i, i_start, i_end, probe_ret;
-    char *mask, matching_mask[17];
+    char mask[17], matching_mask[17];
 
     if (handle == NULL || addr_mask == NULL)
     {
@@ -2459,12 +2459,7 @@ mbus_scan_2nd_address_range(mbus_handle * handle, int pos, char *addr_mask)
         return 0;
     }
 
-    if ((mask = strdup(addr_mask)) == NULL)
-    {
-        MBUS_ERROR("%s: Failed to allocate local copy of the address mask.\n", __PRETTY_FUNCTION__);
-        return -1;
-    }
-
+    strcpy(mask, addr_mask);
     if (mask[pos] == 'f' || mask[pos] == 'F')
     {
         // mask[pos] is a wildcard -> enumerate all 0..9 at this position
@@ -2522,7 +2517,6 @@ mbus_scan_2nd_address_range(mbus_handle * handle, int pos, char *addr_mask)
         }
     }
 
-    free(mask);
     return 0;
 }
 
