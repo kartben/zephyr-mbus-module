@@ -31,6 +31,44 @@
 #endif
 /*@end@*/
 
+#ifndef malloc
+#define malloc k_malloc
+#else
+#error malloc defined
+#endif
+
+#ifndef strdup
+char *strdup(const char *str)
+{
+    size_t len;
+    char *ptr;
+
+    if (!str) {
+	errno = EINVAL;
+	return NULL;
+    }
+
+    len = strlen(str) + 1;
+    ptr = malloc(len);
+    if (!ptr)
+	return NULL;
+
+    return strncpy(ptr, str, len);
+}
+#endif
+
+#ifndef pow
+double pow(double x, double y)
+{
+    double result = x;
+
+    for (double i=1.0; i < y; i++)
+	result *= x;
+
+    return result;
+}
+#endif
+
 static int debug = 0;
 
 typedef struct _mbus_variable_vif {
