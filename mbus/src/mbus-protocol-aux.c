@@ -2479,7 +2479,7 @@ int mbus_read_slave(mbus_handle * handle, mbus_address *address, mbus_frame * re
 int
 mbus_scan_2nd_address_range(mbus_handle * handle, int pos, char *addr_mask)
 {
-    int i, i_start, i_end, probe_ret;
+    int i, i_start = 0, i_end = 0, probe_ret;
     char mask[17], matching_mask[17];
 
     if (handle == NULL || addr_mask == NULL)
