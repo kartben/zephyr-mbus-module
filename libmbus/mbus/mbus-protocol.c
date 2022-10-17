@@ -13,12 +13,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef malloc
-#define malloc k_malloc
-#else
-#error malloc defined
-#endif
-
 #include "mbus-protocol.h"
 
 static int parse_debug = 0, debug = 0;
