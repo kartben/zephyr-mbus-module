@@ -1,0 +1,4 @@
+config LIBMBUS
+	bool "M-Bus Module"
+	help
+	  This option enables the libmbus as a Zephyr module.

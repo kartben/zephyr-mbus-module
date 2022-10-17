@@ -31,12 +31,6 @@
 #endif
 /*@end@*/
 
-#ifndef malloc
-#define malloc k_malloc
-#else
-#error malloc defined
-#endif
-
 #ifndef strdup
 char *strdup(const char *str)
 {

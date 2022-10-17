@@ -31,12 +31,6 @@
 
 LOG_MODULE_DECLARE(MBUS_LOG_MODULE);
 
-#ifndef malloc
-#define malloc k_malloc
-#else
-#error malloc defined
-#endif
-
 static uint8_t ring_buffer[RING_BUFSZ];
 static struct ring_buf ringbuf;
 
@@ -85,7 +79,7 @@ static void serial_cb(const struct device *dev, void *data)
 	}
 
 	if (uart_irq_tx_ready(dev)) {
-	    char buf[CONFIG_UART_1_NRF_TX_BUFFER_SIZE];
+	    char buf[MBUS_UART_FIFO_SIZE];
 	    size_t rlen, slen;
 
 	    rlen = ring_buf_get(&ringbuf, buf, sizeof(buf));

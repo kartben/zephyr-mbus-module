@@ -1,0 +1,6 @@
+if(CONFIG_LIBMBUS)
+  add_subdirectory(.. build)
+  set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS mbus)
+  zephyr_include_directories(../libmbus/mbus)
+  zephyr_interface_library_named(mbus)
+endif()
