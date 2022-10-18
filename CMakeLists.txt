@@ -29,7 +29,7 @@ zephyr_sources(
   libmbus/mbus/mbus-protocol.c
   libmbus/mbus/mbus-protocol-aux.c
   libmbus/mbus/mbus-serial.c
-  src/main.c
+  src/module/mbus-master.c
   )
 zephyr_include_directories(libmbus)
 
