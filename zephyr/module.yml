@@ -1,0 +1,4 @@
+name: mbus
+build:
+  cmake: .
+  kconfig: Kconfig
