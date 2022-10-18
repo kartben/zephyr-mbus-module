@@ -1,4 +1,7 @@
 config LIBMBUS
 	bool "M-Bus Module"
 	help
-	  This option enables the libmbus as a Zephyr module.
+	  Enables libmbus as a Zephyr M-Bus (meter bus) module.
+	  Please note, only serial connection (not TCP) available currently.
+	  You will need a device tree overlay to define the 'mbus0' node.
+
