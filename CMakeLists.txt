@@ -14,16 +14,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 # FetchContent_MakeAvailable(my-lib)
 # target_link_libraries(app PRIVATE my-lib)
 
-#target_compile_options(libmbus PRIVATE -Wall -Wextra)
-#set_target_properties(libmbus PROPERTIES C_STANDARD 11)
-#zephyr_library_import(libmbus ${CMAKE_CURRENT_SOURCE_DIR}/libmbus.a)
-# See https://github.com/zephyrproject-rtos/zephyr/issues/31613
-
-#add_library(libmbus INTERFACE)
-#set_target_properties(libmbus PROPERTIES C_STANDARD 11)
-#target_compile_options(libmbus PRIVATE -Wall -Wextra)
-#target_include_directories(libmbus PUBLIC libmbus/mbus)
-
 zephyr_interface_library_named(mbus)
 zephyr_sources(
   libmbus/mbus/mbus-protocol.c
