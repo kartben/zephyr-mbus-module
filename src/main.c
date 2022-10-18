@@ -10,7 +10,7 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/logging/log.h>
 #include <stdio.h>
-#include "mbus.h"
+#include "mbus/mbus.h"
 
 #define MBUS_LOG_MODULE  mbus
 #define shell_debug if (debug) shell_print
