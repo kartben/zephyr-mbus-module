@@ -1,7 +1,8 @@
-/*
- * Copyright (c) 2017 Intel Corporation
+/* M-Bus master module for Zephyr
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (C) 2022  Addiva Elektronik AB
+ *
+ * Author: Joachim Wiberg <joachim.wiberg@addiva.se>
  */
 
 #include <zephyr/zephyr.h>
@@ -382,24 +383,32 @@ SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
 
 SHELL_CMD_REGISTER(MBUS_LOG_MODULE, &module_shell, "M-Bus commands", NULL);
 
-void main(void)
+int mbus_init(void)
 {
     const char *port = "mbus0";
 
-    mbus_init();
-
     if ((handle = mbus_context_serial(port)) == NULL) {
         LOG_ERR("failed initializing M-Bus context: %s",  mbus_error_str());
-        return;
+        return 1;
     }
 
     if (mbus_connect(handle) == -1) {
         LOG_ERR("failed connecting to serial port %s", port);
-	return;
+	return 1;
     }
 
-//    mbus_disconnect(handle);
-//    mbus_context_free(handle);
+    return 0;
+}
+
+int mbus_exit(void)
+{
+    if (!handle)
+        return 1;
+
+    mbus_disconnect(handle);
+    mbus_context_free(handle);
+
+    return 0;
 }
 
 /**
