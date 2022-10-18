@@ -25,7 +25,6 @@ add_library(libmbus INTERFACE)
 #target_include_directories(libmbus PUBLIC libmbus/mbus)
 zephyr_library()
 zephyr_sources(
-  libmbus/mbus/mbus.c
   libmbus/mbus/mbus-protocol.c
   libmbus/mbus/mbus-protocol-aux.c
   libmbus/mbus/mbus-serial.c
