@@ -407,6 +407,7 @@ int mbus_exit(void)
 
     mbus_disconnect(handle);
     mbus_context_free(handle);
+    handle = NULL;
 
     return 0;
 }
