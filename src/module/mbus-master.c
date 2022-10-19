@@ -4,19 +4,45 @@
  *
  * Author: Joachim Wiberg <joachim.wiberg@addiva.se>
  */
+#define MODULE mbus
 
 #include <zephyr/zephyr.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/logging/log.h>
+#if CONFIG_CAF
+#include <caf/events/module_state_event.h>
+#endif
 #include <stdio.h>
 #include "mbus/mbus.h"
 
-#define MBUS_LOG_MODULE  mbus
 #define shell_debug if (debug) shell_print
+#define NELEMS(v)   (sizeof(v) / sizeof(v[0]))
 
-LOG_MODULE_REGISTER(MBUS_LOG_MODULE);
+LOG_MODULE_REGISTER(MODULE);
 
+/*
+ * Work queue for processing M-Bus commands when using nRF CAF
+ */
+#if CONFIG_CAF
+#define K_WORK_MODULE_NAME &(struct k_work_queue_config){STRINGIFY(MODULE)}
+
+static K_THREAD_STACK_DEFINE(wq_stack, 2048);
+static struct k_work_q wq;
+
+/* Unlikely we'll use need >5 args in this module */
+struct shell_cmd {
+    struct k_work       work;
+    int               (*cb)(const struct shell *, int, char **);
+    const struct shell *sh;
+    int                 argc;
+    char               *argv[5];
+};
+#endif /* CONFIG_CAF */
+
+/*
+ * Module runtime state variables
+ */
 static mbus_handle *handle;
 static int          debug;
 static int          verbose;
@@ -370,18 +396,66 @@ static int toggle_xml(const struct shell *shell, int argc, char *argv[])
 	return 0;
 }
 
+#if CONFIG_CAF
+#define sh_set_address    set_address
+#define sh_scan_devices   scan_devices
+#define sh_probe_devices  probe_devices
+#define sh_query_device   query_device
+#define sh_toggle_debug   toggle_debug
+#define sh_toggle_verbose toggle_verbose
+#define sh_toggle_xml     toggle_xml
+#else
+
+static void mbus_cmd(struct k_work *work)
+{
+    struct shell_cmd *cmd = CONTAINER_OF(work, struct shell_cmd, work);
+
+    if (cmd->cb(cmd->sh, cmd->argc, cmd->argv))
+        LOG_ERR("failed M-Bus command");
+}
+
+struct shell_cmd cmd = {
+    .work = Z_WORK_INITIALIZER(mbus_cmd)
+};
+
+static int work_submit(const struct shell *sh, int argc, char *argv[], int (*cb)(const struct shell *, int, char **))
+{
+    if (argc >= NELEMS(cmd.argv)) {
+        LOG_ERR("too many shell arguments to worker");
+        return 1;
+    }
+
+    cmd.cb = cb;
+    cmd.sh = sh;
+    cmd.argc = argc;
+    for (int i = 0; i < NELEMS(cmd.argv); i++)
+        cmd.argv[i] = argv[i];
+
+    return k_work_submit_to_queue(&wq, &cmd.work);
+}
+
+#define fnwrap(fn) static int _CONCAT(sh_,fn)(const struct shell *s, int c, char *v[]) { return work_submit(s, c, v, fn); }
+fnwrap(set_address)
+fnwrap(scan_devices)
+fnwrap(probe_devices)
+fnwrap(query_device)
+fnwrap(toggle_debug)
+fnwrap(toggle_verbose)
+fnwrap(toggle_xml)
+#endif /* CONFIG_CAF */
+
 SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
-    SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", set_address, 3, 0),
-    SHELL_CMD_ARG(scan,    NULL, "Primary addresses scan", scan_devices, 0, 0),
-    SHELL_CMD_ARG(probe,   NULL, "Secondary addresses scan", probe_devices, 0, 0),
-    SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD ID]", query_device, 2, 1),
-    SHELL_CMD_ARG(debug,   NULL, "Toggle debug mode", toggle_debug, 0, 0),
-    SHELL_CMD_ARG(verbose, NULL, "Toggle verbose output (where applicable)", toggle_verbose, 0, 0),
-    SHELL_CMD_ARG(xml,     NULL, "Toggle XML output", toggle_xml, 0, 0),
+    SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
+    SHELL_CMD_ARG(scan,    NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
+    SHELL_CMD_ARG(probe,   NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
+    SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD ID]", sh_query_device, 2, 1),
+    SHELL_CMD_ARG(debug,   NULL, "Toggle debug mode", sh_toggle_debug, 0, 0),
+    SHELL_CMD_ARG(verbose, NULL, "Toggle verbose output (where applicable)", sh_toggle_verbose, 0, 0),
+    SHELL_CMD_ARG(xml,     NULL, "Toggle XML output", sh_toggle_xml, 0, 0),
     SHELL_SUBCMD_SET_END
 );
 
-SHELL_CMD_REGISTER(MBUS_LOG_MODULE, &module_shell, "M-Bus commands", NULL);
+SHELL_CMD_REGISTER(MODULE, &module_shell, "M-Bus commands", NULL);
 
 int mbus_init(void)
 {
@@ -397,6 +471,13 @@ int mbus_init(void)
 	return 1;
     }
 
+#if CONFIG_CAF
+    /* https://docs.zephyrproject.org/1.14.0/reference/kconfig/CONFIG_SYSTEM_WORKQUEUE_PRIORITY.html */
+    k_work_queue_start(&wq, wq_stack, K_THREAD_STACK_SIZEOF(wq_stack),
+                       CONFIG_SYSTEM_WORKQUEUE_PRIORITY, K_WORK_MODULE_NAME);
+    module_set_state(MODULE_STATE_READY);
+#endif
+
     return 0;
 }
 
@@ -411,6 +492,32 @@ int mbus_exit(void)
 
     return 0;
 }
+
+#if CONFIG_CAF
+static bool handle_module_event(const struct module_state_event *evt)
+{
+    if (check_state(evt, MODULE_ID(main), MODULE_STATE_READY)) {
+        LOG_DBG("Initializing M-Bus module ...");
+        mbus_init();
+        return true;
+    }
+
+    return false;
+}
+
+static bool app_event_handler(const struct app_event_header *aeh)
+{
+    if (is_module_state_event(aeh))
+        return handle_module_event(cast_module_state_event(aeh));
+
+    __ASSERT_NO_MSG(false);
+
+    return false;
+}
+
+APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
+#endif /* CONFIG_CAF */
 
 /**
  * Local Variables:
