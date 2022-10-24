@@ -43,7 +43,7 @@ static int    rx_pos;
 /* queue to store up to 10 messages (aligned to 4-byte boundary) */
 K_MSGQ_DEFINE(mbus_mq, sizeof(mbus_frame), 10, 4);
 
-static void serial_cb(const struct device *dev, void *data)
+static void uart_isr(const struct device *dev, void *data)
 {
     while (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
 	if (uart_irq_rx_ready(dev)) {
@@ -109,7 +109,7 @@ int mbus_serial_connect(mbus_handle *handle)
     }
 
     ring_buf_init(&ringbuf, sizeof(ring_buffer), ring_buffer);
-    uart_irq_callback_user_data_set(dev, serial_cb, NULL);
+    uart_irq_callback_user_data_set(dev, uart_isr, NULL);
     uart_irq_rx_enable(dev);
 
     return mbus_serial_set_baudrate(handle, DEFAULT_BAUDRATE);
