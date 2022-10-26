@@ -1,5 +1,5 @@
 # Based on the excellent https://github.com/yashi/module-sample/
-if(CONFIG_LIBMBUS)
+if(CONFIG_MBUS)
 project(mbus)
 cmake_minimum_required(VERSION 3.20.0)
 
