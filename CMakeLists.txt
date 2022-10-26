@@ -18,6 +18,8 @@ zephyr_interface_library_named(mbus)
 zephyr_sources(
   libmbus/mbus/mbus-protocol.c
   libmbus/mbus/mbus-protocol-aux.c
+  libmbus/lib/pow.c
+  libmbus/lib/strdup.c
   src/module/mbus-serial.c
   src/module/mbus-master.c
   )
