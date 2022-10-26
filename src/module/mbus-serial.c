@@ -20,9 +20,9 @@
 #include <strings.h>
 #include <string.h>
 
-#include "mbus-serial.h"
-#include "mbus-protocol-aux.h"
-#include "mbus-protocol.h"
+#include "mbus/mbus-serial.h"
+#include "mbus/mbus-protocol-aux.h"
+#include "mbus/mbus-protocol.h"
 
 #ifdef CONFIG_UART_1_NRF_TX_BUFFER_SIZE
 # define MBUS_UART_FIFO_SIZE CONFIG_UART_1_NRF_TX_BUFFER_SIZE
