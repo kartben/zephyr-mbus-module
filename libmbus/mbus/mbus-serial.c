@@ -8,6 +8,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include <autoconf.h>
 #include <zephyr/zephyr.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
@@ -22,6 +23,12 @@
 #include "mbus-serial.h"
 #include "mbus-protocol-aux.h"
 #include "mbus-protocol.h"
+
+#ifdef CONFIG_UART_1_NRF_TX_BUFFER_SIZE
+# define MBUS_UART_FIFO_SIZE CONFIG_UART_1_NRF_TX_BUFFER_SIZE
+#else
+# error UART_1_NRF_TX_BUFFER_SIZE undefined
+#endif
 
 #define DEFAULT_BAUDRATE 2400
 #define PACKET_BUFSZ     384

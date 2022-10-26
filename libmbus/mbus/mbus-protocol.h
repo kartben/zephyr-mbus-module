@@ -33,15 +33,6 @@
 #error malloc defined
 #endif
 
-#ifdef CONFIG_UART_1_NRF_TX_BUFFER_SIZE
-#define MBUS_UART_FIFO_SIZE CONFIG_UART_1_NRF_TX_BUFFER_SIZE
-#else
-#error UART_1_NRF_TX_BUFFER_SIZE undefined
-#endif
-#else
-#define MBUS_UART_FIFO_SIZE 32
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
