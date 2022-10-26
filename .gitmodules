@@ -1,0 +1,3 @@
+[submodule "libmbus"]
+	path = libmbus
+	url = https://github.com/addiva-elektronik/libmbus.git
