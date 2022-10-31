@@ -126,24 +126,6 @@ static void uart_isr(const struct device *dev, void *data)
     }
 }
 
-int mbus_serial_connect(mbus_handle *handle)
-{
-    if (handle == NULL)
-        return -1;
-
-    dev = device_get_binding(UART_DEVICE);
-    if (!dev) {
-	mbus_error_str_set("cannot find device tree node %s", UART_DEVICE);
-	return -1;
-    }
-
-    ring_buf_init(&ringbuf, sizeof(ring_buffer), ring_buffer);
-    uart_irq_callback_user_data_set(dev, uart_isr, NULL);
-    uart_irq_rx_enable(dev);
-
-    return mbus_serial_set_baudrate(handle, DEFAULT_BAUDRATE);
-}
-
 static serial_line_set(mbus_handle *handle)
 {
     struct uart_config uc = {
@@ -172,6 +154,24 @@ static serial_line_set(mbus_handle *handle)
 	timeout = 3410000 / 38400;
 
     return 0;
+}
+
+int mbus_serial_connect(mbus_handle *handle)
+{
+    if (handle == NULL)
+        return -1;
+
+    dev = device_get_binding(UART_DEVICE);
+    if (!dev) {
+	mbus_error_str_set("cannot find device tree node %s", UART_DEVICE);
+	return -1;
+    }
+
+    ring_buf_init(&ringbuf, sizeof(ring_buffer), ring_buffer);
+    uart_irq_callback_user_data_set(dev, uart_isr, NULL);
+    uart_irq_rx_enable(dev);
+
+    return serial_line_set(handle);
 }
 
 int mbus_serial_set_baudrate(mbus_handle *handle, long baudrate)
