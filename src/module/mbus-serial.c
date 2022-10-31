@@ -212,10 +212,10 @@ int mbus_serial_send_frame(mbus_handle *handle, mbus_frame *frame)
     if (rlen < len)
 	LOG_ERR("Drop %zd bytes", len - rlen);
 
+    uart_irq_tx_enable(dev);
+
     if (rlen == 0)
 	return -1;
-
-    uart_irq_tx_enable(dev);
 
     return 0;
 }
