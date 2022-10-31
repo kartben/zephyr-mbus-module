@@ -90,10 +90,9 @@ static void uart_isr(const struct device *dev, void *data)
 		rx_buf[rx_pos++] = c;
 
 		rc = mbus_parse(&frame, rx_buf, rx_pos);
-		if (rc < 0) {
-		    LOG_ERR("Failed parsing M-Bus frame, rc %d: %s", rc, mbus_error_str());
+		if (rc < 0)
 		    rx_pos = 0;
-		}
+
 		if (rc == 0) {
 		    LOG_HEXDUMP_DBG(rx_buf, rx_pos, "RX IN");
 
@@ -104,7 +103,7 @@ static void uart_isr(const struct device *dev, void *data)
 		    rx_pos = 0;
 		}
 	    } else {
-		LOG_ERR("Frame overflow, dropping.");
+		mbus_error_str_set("frame overflow, dropping.");
 		rx_pos = 0;
 	    }
 	}
@@ -115,14 +114,13 @@ static void uart_isr(const struct device *dev, void *data)
 
 	    rlen = ring_buf_get(&ringbuf, buf, sizeof(buf));
 	    if (!rlen) {
-		LOG_DBG("Ring buffer empty, disable TX IRQ");
 		uart_irq_tx_disable(dev);
 		continue;
 	    }
 
 	    slen = uart_fifo_fill(dev, buf, rlen);
 	    if (slen < rlen)
-		LOG_ERR("Drop %zd bytes", rlen - slen);
+		mbus_error_str_set("drop %zd bytes", rlen - slen);
 	    LOG_HEXDUMP_DBG(buf, slen, "TX OUT");
 	}
     }
@@ -135,7 +133,7 @@ int mbus_serial_connect(mbus_handle *handle)
 
     dev = device_get_binding(UART_DEVICE);
     if (!dev) {
-	LOG_ERR("cannot find device tree node %s", UART_DEVICE);
+	mbus_error_str_set("cannot find device tree node %s", UART_DEVICE);
 	return -1;
     }
 
@@ -236,13 +234,15 @@ int mbus_serial_send_frame(mbus_handle *handle, mbus_frame *frame)
 
     len = mbus_frame_pack(frame, buf, sizeof(buf));
     if (len == -1) {
-        LOG_ERR("mbus_frame_pack failed");
+	mbus_error_str_set("M-Bus serial failed mbus_frame_pack(), ret %d", len);
         return -1;
     }
 
     rlen = ring_buf_put(&ringbuf, buf, len);
-    if (rlen < len)
-	LOG_ERR("Drop %zd bytes", len - rlen);
+    if (rlen < len) {
+        mbus_error_str_set("M-Bus serial failed sending complete frame, dropped %zd bytes", len - rlen);
+        rlen = 0;
+    }
 
     uart_irq_tx_enable(dev);
 
