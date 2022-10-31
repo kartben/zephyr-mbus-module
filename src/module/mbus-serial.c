@@ -52,6 +52,7 @@
 #endif
 
 #define DEFAULT_BAUDRATE 2400
+#define DEFAULT_PARITY   UART_CFG_PARITY_EVEN
 #define PACKET_BUFSZ     384
 #define RING_BUFSZ       1024
 #define UART_DEVICE      "mbus0"
@@ -63,7 +64,9 @@ static uint8_t ring_buffer[RING_BUFSZ];
 static struct ring_buf ringbuf;
 
 static const struct device *dev;
-static int timeout;
+static int timeout    = (3410000 / DEFAULT_BAUDRATE);
+static int c_baudrate = DEFAULT_BAUDRATE;
+static int c_parity   = DEFAULT_PARITY;
 
 static char   rx_buf[PACKET_BUFSZ];
 static int    rx_pos;
@@ -143,12 +146,12 @@ int mbus_serial_connect(mbus_handle *handle)
     return mbus_serial_set_baudrate(handle, DEFAULT_BAUDRATE);
 }
 
-int mbus_serial_set_baudrate(mbus_handle *handle, long baudrate)
+static serial_line_set(mbus_handle *handle)
 {
     struct uart_config uc = {
-	.baudrate  = baudrate,
+	.baudrate  = c_baudrate,
 	.data_bits = UART_CFG_DATA_BITS_8,
-	.parity    = UART_CFG_PARITY_NONE, //UART_CFG_PARITY_EVEN,
+	.parity    = c_parity,
 	.stop_bits = UART_CFG_STOP_BITS_1,
 	.flow_ctrl = UART_CFG_FLOW_CTRL_NONE,
     };
@@ -159,17 +162,46 @@ int mbus_serial_set_baudrate(mbus_handle *handle, long baudrate)
 
     rc = uart_configure(dev, &uc);
     if (rc < 0) {
-	LOG_ERR("failed setting up M-Bus UART %ld 8E1, error %d", baudrate, -rc);
+        mbus_error_str_set("failed adjusting line settings %d 8%c1, error %d.",
+                           c_baudrate, c_parity == UART_CFG_PARITY_EVEN
+                           ? 'E' : 'N', rc);
 	return -1;
     }
 
-    if (baudrate <= 38400)
-	timeout = 3410000 / baudrate;
+    if (c_baudrate <= 38400)
+	timeout = 3410000 / c_baudrate;
     else
 	timeout = 3410000 / 38400;
 
     return 0;
 }
+
+int mbus_serial_set_baudrate(mbus_handle *handle, long baudrate)
+{
+    c_baudrate = baudrate;
+
+    return serial_line_set(handle);
+}
+
+int mbus_serial_set_parity(mbus_handle *handle, int parity)
+{
+    switch (parity) {
+    case 0:
+        c_parity = UART_CFG_PARITY_NONE;
+        break;
+    case 1:
+        c_parity = UART_CFG_PARITY_ODD;
+        break;
+    case 2:
+        c_parity = UART_CFG_PARITY_EVEN;
+        break;
+    default:
+        return -1;
+    }
+
+    return serial_line_set(handle);
+}
+
 
 int mbus_serial_disconnect(mbus_handle *handle)
 {
