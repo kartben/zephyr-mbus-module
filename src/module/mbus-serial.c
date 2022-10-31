@@ -126,7 +126,7 @@ static void uart_isr(const struct device *dev, void *data)
     }
 }
 
-static serial_line_set(mbus_handle *handle)
+static int serial_line_set(mbus_handle *handle)
 {
     struct uart_config uc = {
 	.baudrate  = c_baudrate,
