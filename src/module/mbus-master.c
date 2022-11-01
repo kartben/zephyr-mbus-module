@@ -422,26 +422,26 @@ static int toggle_debug(const struct shell *shell, int argc, char *argv[])
 
 static int toggle_verbose(const struct shell *shell, int argc, char *argv[])
 {
-	verbose ^= 1;
-	LOG_INF("verbose output %s", ENABLED(verbose));
-	return 0;
+    verbose ^= 1;
+    LOG_INF("verbose output %s", ENABLED(verbose));
+    return 0;
 }
 
 static int toggle_xml(const struct shell *shell, int argc, char *argv[])
 {
-	xml ^= 1;
-	LOG_INF("XML output %s", ENABLED(xml));
-	return 0;
+    xml ^= 1;
+    LOG_INF("XML output %s", ENABLED(xml));
+    return 0;
 }
 
 static int cmd_set_parity(const struct shell *shell, size_t argc, char **argv, void *data)
 {
-        return mbus_serial_set_parity(handle, (int)data);
+    return mbus_serial_set_parity(handle, (int)data);
 }
 
 static int cmd_set_speed(const struct shell *shell, size_t argc, char **argv, void *data)
 {
-        return mbus_serial_set_baudrate(handle, (int)data);
+    return mbus_serial_set_baudrate(handle, (int)data);
 }
 
 #ifndef CONFIG_CAF
