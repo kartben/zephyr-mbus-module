@@ -431,22 +431,23 @@ static int scan_devices(const struct shell *shell, int argc, char *argv[])
     return mbus_scan_primary_range(shell);
 }
 
-static int found_device(const char *addr, const char *mask)
+static int found_device(void *arg, const char *addr, const char *mask)
 {
+    const struct shell *shell = (const struct shell *)arg;
     mbus_frame reply;
 
     if (mbus_send_request_frame(handle, MBUS_ADDRESS_NETWORK_LAYER) == -1) {
-	LOG_ERR("failed sending M-Bus request to %s.", addr);
+	err("failed sending M-Bus request to %s.", addr);
 	return 1;
     }
 
     if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK) {
-	LOG_ERR("failed receiving M-Bus response from %s.", addr);
+	err("failed receiving M-Bus response from %s.", addr);
 	return 1;
     }
 
     if (reg_add(addr, reply.address))
-        LOG_INF("Found %s with address mask %s\n", addr, mask);
+        log("Found %s with address mask %s\n", addr, mask);
 
     return 0;
 }
@@ -464,7 +465,7 @@ static int probe_devices(const struct shell *shell, int argc, char *argv[])
     if (init_slaves(shell))
         return -1;
 
-    if (mbus_probe_secondary_range(handle, 0, addr_mask, found_device)) {
+    if (mbus_probe_secondary_range(handle, 0, addr_mask, found_device, (void *)shell)) {
         wrn("failed probe, %s", mbus_error_str());
         return 1;
     }
