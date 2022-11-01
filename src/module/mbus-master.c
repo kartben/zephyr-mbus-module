@@ -545,18 +545,7 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
     return 0;
 }
 
-static int show_status(const struct shell *sh, int argc, char *argv[])
-{
-    if (!handle) {
-        shell_error(sh, "M-Bus module not initialized.");
-        return 1;
-    }
-
-    shell_print(sh, "M-Bus module initialized, %s ready for commands.", MBUS_DEVICE);
-    return 0;
-}
-
-static int toggle_debug(const struct shell *shell, int argc, char *argv[])
+static int cmd_toggle_debug(const struct shell *shell, int argc, char *argv[])
 {
     debug ^= 1;
 
@@ -582,14 +571,14 @@ static int cmd_interactive(const struct shell *shell, int argc, char *argv[])
     return 0;
 }
 
-static int toggle_verbose(const struct shell *shell, int argc, char *argv[])
+static int cmd_toggle_verbose(const struct shell *shell, int argc, char *argv[])
 {
     verbose ^= 1;
     log("verbose output %s", ENABLED(verbose));
     return 0;
 }
 
-static int toggle_xml(const struct shell *shell, int argc, char *argv[])
+static int cmd_toggle_xml(const struct shell *shell, int argc, char *argv[])
 {
     xml ^= 1;
     log("XML output %s", ENABLED(xml));
@@ -610,6 +599,13 @@ static int cmd_status(struct shell *shell, size_t argc, char **argv)
 {
     char status[32];
 
+    if (!handle) {
+        shell_error(shell, "M-Bus module not initialized.");
+        return 1;
+    }
+
+    shell_print(shell, "M-Bus module initialized, %s ready for commands.", MBUS_DEVICE);
+
     if (mbus_serial_diag(handle, status, sizeof(status))) {
         shell_warn(shell, "Not connected.");
         return 1;
@@ -626,6 +622,11 @@ static int cmd_reset(const struct shell *shell, size_t argc, char **argv)
     mbus_serial_reset(handle);
     reg_reset();
 
+    debug = 0;
+    interactive = 0;
+    verbose = 0;
+    xml = 0;
+
     return 0;
 }
 
@@ -634,10 +635,6 @@ static int cmd_reset(const struct shell *shell, size_t argc, char **argv)
 #define sh_scan_devices   scan_devices
 #define sh_probe_devices  probe_devices
 #define sh_query_device   query_device
-#define sh_toggle_debug   toggle_debug
-#define sh_show_status    show_status
-#define sh_toggle_verbose toggle_verbose
-#define sh_toggle_xml     toggle_xml
 #else
 
 static void mbus_cmd(struct k_work *work)
@@ -684,10 +681,6 @@ fnwrap(set_address)
 fnwrap(scan_devices)
 fnwrap(probe_devices)
 fnwrap(query_device)
-fnwrap(show_status)
-fnwrap(toggle_debug)
-fnwrap(toggle_verbose)
-fnwrap(toggle_xml)
 #endif /* CONFIG_CAF */
 
 SHELL_SUBCMD_DICT_SET_CREATE(parity_cmds, cmd_set_parity,
@@ -707,21 +700,24 @@ SHELL_SUBCMD_DICT_SET_CREATE(speed_cmds, cmd_set_speed,
 	(38400, 38400)
 );
 
-SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
-    SHELL_CMD_ARG(status,      NULL, "Probed devices, line status, etc.", cmd_status, 0, 0),
+SHELL_STATIC_SUBCMD_SET_CREATE(mbus_set,
+    SHELL_CMD_ARG(address,     NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
     SHELL_CMD(parity, &parity_cmds,  "Set line parity", NULL),
     SHELL_CMD(speed, &speed_cmds,    "Set line speed", NULL),
-    SHELL_CMD_ARG(reset,       NULL, "Clear registry, line settings, etc.", cmd_reset, 0, 0),
-    SHELL_CMD_ARG(address,     NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
+    SHELL_CMD_ARG(debug,       NULL, "Set debug mode", cmd_toggle_debug, 0, 0),
+    SHELL_CMD_ARG(interactive, NULL, "Set interactive mode", cmd_interactive, 0, 0),
+    SHELL_CMD_ARG(verbose,     NULL, "Set verbose output (where applicable)", cmd_toggle_verbose, 0, 0),
+    SHELL_CMD_ARG(xml,         NULL, "Set XML output", cmd_toggle_xml, 0, 0),
+);
+
+SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
     SHELL_CMD_ARG(ping,        NULL, "Ping primary address", cmd_ping, 1, 1),
     SHELL_CMD_ARG(scan,        NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
     SHELL_CMD_ARG(probe,       NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
+    SHELL_CMD_ARG(reset,       NULL, "Clear registry, line settings, etc.", cmd_reset, 0, 0),
     SHELL_CMD_ARG(request,     NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD_ID]", sh_query_device, 2, 1),
-    SHELL_CMD_ARG(status,      NULL, "Show status of M-Bus module", sh_show_status, 0, 0),
-    SHELL_CMD_ARG(debug,       NULL, "Toggle debug mode", sh_toggle_debug, 0, 0),
-    SHELL_CMD_ARG(interactive, NULL, "Toggle interactive mode", cmd_interactive, 0, 0),
-    SHELL_CMD_ARG(verbose,     NULL, "Toggle verbose output (where applicable)", sh_toggle_verbose, 0, 0),
-    SHELL_CMD_ARG(xml,         NULL, "Toggle XML output", sh_toggle_xml, 0, 0),
+    SHELL_CMD_ARG(set,    &mbus_set, "Set M-Bus device settings, line propertis status, etc.", NULL, 3, 2),
+    SHELL_CMD_ARG(status,      NULL, "Probed devices, line status, etc.", cmd_status, 0, 0),
     SHELL_SUBCMD_SET_END
 );
 
