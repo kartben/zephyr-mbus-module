@@ -563,7 +563,7 @@ static int toggle_debug(const struct shell *shell, int argc, char *argv[])
     shell_print(shell, "M-Bus debugging %s.", ENABLED(debug));
     LOG_LEVEL_SET(debug ? LOG_LEVEL_DBG : LOG_LEVEL_INF);
 
-    mbus_parse_set_debug(debug);
+//    mbus_parse_set_debug(debug);
     if (debug) {
         mbus_register_send_event(handle, mbus_dump_send_event);
         mbus_register_recv_event(handle, mbus_dump_recv_event);
