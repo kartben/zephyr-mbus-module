@@ -44,6 +44,12 @@
 #define NELEMS(v)    (sizeof(v) / sizeof(v[0]))
 #define ENABLED(v)   v ? "enabled" : "disabled"
 
+#define shell_dbg(s,f,a...)  if (debug) shell_print(s, f, ##a);
+#define err(fmt, args...)  { if (shell) shell_error(shell, fmt, ##args); else LOG_ERR(fmt, ##args); }
+#define wrn(fmt, args...)  { if (shell) shell_warn(shell, fmt, ##args);  else LOG_WRN(fmt, ##args); }
+#define dbg(fmt, args...)  { if (shell) {shell_dbg(shell, fmt, ##args);} else LOG_DBG(fmt, ##args); }
+#define log(fmt, args...)  { if (shell) shell_info(shell, fmt, ##args);  else LOG_INF(fmt, ##args); }
+
 LOG_MODULE_REGISTER(MODULE);
 
 /*
@@ -80,7 +86,7 @@ static int          xml;
 
 static int init_slaves(const struct shell *shell)
 {
-    LOG_INF("sending ping frames to wake up devices ...");
+    log("sending ping frames to wake up devices ...");
     if (mbus_send_ping_frame(handle, MBUS_ADDRESS_NETWORK_LAYER, 1) == -1)
 	goto fail;
 
@@ -89,26 +95,26 @@ static int init_slaves(const struct shell *shell)
 
     return 0;
 fail:
-    LOG_ERR("Failed initializing M-Bus slaves (SND_NKE)");
+    err("Failed initializing M-Bus slaves (SND_NKE)");
     return -1;
 }
 
 static int secondary_select(const struct shell *shell, char *mask)
 {
-    LOG_INF("sending secondary select for mask %s", mask);
+    log("sending secondary select for mask %s", mask);
 
     switch (mbus_select_secondary_address(handle, mask)) {
     case MBUS_PROBE_COLLISION:
-	LOG_WRN("address mask [%s] matches more than one device.", mask);
+	wrn("address mask [%s] matches more than one device.", mask);
 	return -1;
     case MBUS_PROBE_NOTHING:
-	LOG_WRN("address mask [%s] does not match any device.", mask);
+	wrn("address mask [%s] does not match any device.", mask);
 	return -1;
     case MBUS_PROBE_ERROR:
-	LOG_ERR("failed selecting secondary address [%s].", mask);
+	err("failed selecting secondary address [%s].", mask);
 	return -1;
     case MBUS_PROBE_SINGLE:
-	LOG_DBG("address mask [%s] matches a single device.", mask);
+	dbg("address mask [%s] matches a single device.", mask);
 	break;
     }
 
@@ -120,7 +126,7 @@ static int parse_addr(const struct shell *shell, char *args)
     int address;
 
     if (!args) {
-	LOG_INF("missing required argument, address, can be primary or secondary.");
+	log("missing required argument, address, can be primary or secondary.");
 	return 1;
     }
 
@@ -134,11 +140,11 @@ static int parse_addr(const struct shell *shell, char *args)
     } else {
 	address = atoi(args);
 	if (address < 1 || address > 255) {
-	    LOG_INF("invalid primary address %s.", args);
+	    log("invalid primary address %s.", args);
 	    return 1;
 	}
     }
-    LOG_DBG("using primary address %d ...", address);
+    dbg("using primary address %d ...", address);
 
     return address;
 }
@@ -151,20 +157,20 @@ static int query_device(const struct shell *shell, int argc, char *argv[])
     int address;
 
     if (argc < 2) {
-	LOG_INF("usage: request ADDR [ID]");
+	log("usage: request ADDR [ID]");
 	return -1;
     }
 
     addr_arg = argv[1];
     address = parse_addr(shell, addr_arg);
-    LOG_INF("sending request frame to primary address %d", address);
+    log("sending request frame to primary address %d", address);
     if (mbus_send_request_frame(handle, address) == -1) {
-	LOG_ERR("failed sending M-Bus request to %d.", address);
+	err("failed sending M-Bus request to %d.", address);
 	return 1;
     }
 
     if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK) {
-	LOG_ERR("failed receiving M-Bus response from %d.", address);
+	err("failed receiving M-Bus response from %d.", address);
 	return 1;
     }
 
@@ -174,7 +180,7 @@ static int query_device(const struct shell *shell, int argc, char *argv[])
     }
 
     if (mbus_frame_data_parse(&reply, &data) == -1) {
-	LOG_ERR("M-bus data parse error: %s", mbus_error_str());
+	err("M-bus data parse error: %s", mbus_error_str());
 	return 1;
     }
 
@@ -184,7 +190,7 @@ static int query_device(const struct shell *shell, int argc, char *argv[])
 	    char *xml_data;
 
 	    if (!(xml_data = mbus_frame_data_xml(&data))) {
-		LOG_ERR("failed generating XML output of M-BUS response: %s", mbus_error_str());
+		err("failed generating XML output of M-BUS response: %s", mbus_error_str());
 		return 1;
 	    }
 
@@ -211,9 +217,9 @@ static int query_device(const struct shell *shell, int argc, char *argv[])
 	    int i;
 
 	    for (entry = data.data_var.record, i = 0; entry; entry = entry->next, i++) {
-		LOG_DBG("record ID %d DIF %02x VID %02x", i,
-                        entry->drh.dib.dif & MBUS_DATA_RECORD_DIF_MASK_DATA,
-                        entry->drh.vib.vif & MBUS_DIB_VIF_WITHOUT_EXTENSION);
+		dbg("record ID %d DIF %02x VID %02x", i,
+                    entry->drh.dib.dif & MBUS_DATA_RECORD_DIF_MASK_DATA,
+                    entry->drh.vib.vif & MBUS_DIB_VIF_WITHOUT_EXTENSION);
 	    }
 
 	    for (entry = data.data_var.record, i = 0; entry && i < record_id; entry = entry->next, i++)
@@ -255,10 +261,10 @@ static int ping_address(const struct shell *shell, mbus_frame *reply, int addres
     memset(reply, 0, sizeof(mbus_frame));
 
     for (i = 0; i <= handle->max_search_retry; i++) {
-	LOG_DBG("%d ", address);
+	dbg("%d ", address);
 
 	if (mbus_send_ping_frame(handle, address, 0) == -1) {
-	    LOG_WRN("scan failed sending ping frame: %s", mbus_error_str());
+	    wrn("scan failed sending ping frame: %s", mbus_error_str());
 	    return MBUS_RECV_RESULT_ERROR;
 	}
 
@@ -285,17 +291,17 @@ static int mbus_scan_1st_address_range(const struct shell *shell)
 
 	if (rc == MBUS_RECV_RESULT_INVALID) {
 	    mbus_purge_frames(handle);
-	    LOG_WRN("collision at address %d.", address);
+	    wrn("collision at address %d.", address);
 	    continue;
 	}
 
 	if (mbus_frame_type(&reply) == MBUS_FRAME_TYPE_ACK) {
 	    if (mbus_purge_frames(handle)) {
-		LOG_WRN("collision at address %d.", address);
+		wrn("collision at address %d.", address);
 		continue;
 	    }
 
-	    LOG_INF("found an M-Bus device at address %d.", address);
+	    log("found an M-Bus device at address %d.", address);
 	    rc = 0;
 	}
     }
@@ -346,9 +352,9 @@ static int probe_devices(const struct shell *shell, int argc, char *argv[])
 {
     char addr_mask[20] = "FFFFFFFFFFFFFFFF";
 
-    LOG_INF("Probing secondary addresses ...");
+    log("Probing secondary addresses ...");
     if (mbus_is_secondary_address(addr_mask) == 0) {
-        LOG_ERR("malformed secondary address mask. Must be 16 character HEX number.");
+        err("malformed secondary address mask. Must be 16 character HEX number.");
         return -1;
     }
 
@@ -368,7 +374,7 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
     if (!mbus_is_secondary_address(mask)) {
 	curr = atoi(mask);
 	if (curr < 0 || curr > 250) {
-	    LOG_WRN("invalid secondary address [%s], also not a primary address (0-250).", argv[1]);
+	    wrn("invalid secondary address [%s], also not a primary address (0-250).", argv[1]);
 	    return 1;
 	}
     } else {
@@ -377,7 +383,7 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
 
     next = atoi(argv[2]);
     if (next < 1 || next > 250) {
-	LOG_WRN("invalid new primary address [%s], allowed 1-250.", argv[2]);
+	wrn("invalid new primary address [%s], allowed 1-250.", argv[2]);
 	return 1;
     }
 
@@ -385,12 +391,12 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
 	return 1;
 
     if (mbus_send_ping_frame(handle, next, 0) == -1) {
-	LOG_WRN("failed sending verification ping: %s", mbus_error_str());
+	wrn("failed sending verification ping: %s", mbus_error_str());
 	return 1;
     }
 
     if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_TIMEOUT) {
-	LOG_WRN("verification failed, primary address [%d] already in use.", next);
+	wrn("verification failed, primary address [%d] already in use.", next);
 	return 1;
     }
 
@@ -401,7 +407,7 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
 
     for (int retries = 3; retries > 0; retries--) {
 	if (mbus_set_primary_address(handle, curr, next) == -1) {
-	    LOG_WRN("failed setting device [%s] primary address: %s", mask, mbus_error_str());
+	    wrn("failed setting device [%s] primary address: %s", mask, mbus_error_str());
 	    return 1;
 	}
 
@@ -409,19 +415,19 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
 	    if (retries > 1)
 		continue;
 
-	    LOG_WRN("No reply from device [%s].", mask);
+	    wrn("No reply from device [%s].", mask);
 	    return 1;
 	}
 	break;
     }
 
     if (mbus_frame_type(&reply) != MBUS_FRAME_TYPE_ACK) {
-	LOG_WRN("invalid response from device [%s], exected ACK, got:", mask);
+	wrn("invalid response from device [%s], exected ACK, got:", mask);
 	mbus_frame_print(&reply);
 	return 1;
     }
 
-    LOG_DBG("primary address of device %s set to %d", mask, next);
+    dbg("primary address of device %s set to %d", mask, next);
 
     return 0;
 }
@@ -459,14 +465,14 @@ static int toggle_debug(const struct shell *shell, int argc, char *argv[])
 static int toggle_verbose(const struct shell *shell, int argc, char *argv[])
 {
     verbose ^= 1;
-    LOG_INF("verbose output %s", ENABLED(verbose));
+    log("verbose output %s", ENABLED(verbose));
     return 0;
 }
 
 static int toggle_xml(const struct shell *shell, int argc, char *argv[])
 {
     xml ^= 1;
-    LOG_INF("XML output %s", ENABLED(xml));
+    log("XML output %s", ENABLED(xml));
     return 0;
 }
 
