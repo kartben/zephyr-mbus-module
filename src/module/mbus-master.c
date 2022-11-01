@@ -65,7 +65,7 @@ extern int mbus_serial_diag(mbus_handle *handle, char *buf, size_t len);
 #if CONFIG_CAF
 #define K_WORK_MODULE_NAME &(struct k_work_queue_config){STRINGIFY(MODULE)}
 
-static K_THREAD_STACK_DEFINE(wq_stack, 16384);
+static K_THREAD_STACK_DEFINE(wq_stack, 4096);
 static struct k_work_q wq;
 
 /* Unlikely we'll use need >5 args in this module */
