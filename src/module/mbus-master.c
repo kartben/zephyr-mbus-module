@@ -496,7 +496,7 @@ static int cmd_set_speed(const struct shell *shell, size_t argc, char **argv, vo
     return mbus_serial_set_baudrate(handle, (int)data);
 }
 
-static int cmd_diagnose(const struct shell *shell, size_t argc, char **argv)
+static int cmd_status(struct shell *shell, size_t argc, char **argv)
 {
     char status[32];
 
@@ -588,7 +588,7 @@ SHELL_SUBCMD_DICT_SET_CREATE(speed_cmds, cmd_set_speed,
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
-    SHELL_CMD_ARG(diagnose,    NULL, "Diagnostic information, line status, etc.", cmd_diagnose, 0, 0),
+    SHELL_CMD_ARG(status,      NULL, "Probed devices, line status, etc.", cmd_status, 0, 0),
     SHELL_CMD(parity, &parity_cmds,  "Set line parity", NULL),
     SHELL_CMD(speed, &speed_cmds,    "Set line speed", NULL),
     SHELL_CMD_ARG(address,     NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
