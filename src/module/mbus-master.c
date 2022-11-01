@@ -152,6 +152,9 @@ static void reg_reset(void)
 
 static int reg_show(const struct shell *shell)
 {
+    if (num <= 0)
+        return 0;
+
     log("PRI  SEC ==============================================");
     for (size_t i = 0; i < num; i++)
         log("%3d  %s", registry[i].primary, registry[i].secondary);
