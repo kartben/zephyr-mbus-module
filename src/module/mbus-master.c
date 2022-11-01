@@ -41,6 +41,7 @@
 #include <stdio.h>
 
 #include "mbus/mbus.h"
+extern char *fs_strdup(const char *str);
 
 #define MBUS_DEVICE  "mbus0"
 #define NELEMS(v)    (sizeof(v) / sizeof(v[0]))
@@ -58,6 +59,7 @@ LOG_MODULE_REGISTER(MODULE);
  * Local forward declarations
  */
 extern int mbus_serial_diag(mbus_handle *handle, char *buf, size_t len);
+extern int mbus_serial_reset(mbus_handle *handle);
 
 /*
  * Work queue for processing M-Bus commands when using nRF CAF
@@ -86,6 +88,76 @@ static int          debug;
 static int          verbose;
 static int          interactive;
 static int          xml;
+
+#define REG_NUM_MAX 50
+struct reg {
+	int   primary;
+	char *secondary;
+};
+static size_t num = 0;
+static struct reg registry[REG_NUM_MAX];
+
+
+static int reg_find_secondary(const char *secondary)
+{
+    for (size_t i = 0; i < num; i++) {
+        if (strcmp(registry[i].secondary, secondary))
+            continue;
+
+        return i;
+    }
+
+    return -1;
+}
+
+static int reg_add(const char *secondary, int primary)
+{
+    if (!secondary)
+        return -1;
+    if (num >= REG_NUM_MAX)
+        return -1;
+    if (reg_find_secondary(secondary) >= 0)
+        return 0;	/* already */
+
+    registry[num].secondary = fs_strdup(secondary);
+    registry[num].primary = primary;
+    num++;
+
+    return 0;
+}
+
+static int reg_set_primary(const char *secondary, int primary)
+{
+    int id;
+
+    id = reg_find_secondary(secondary);
+    if (id == -1)
+        return -1;
+
+    registry[id].primary = primary;
+    return 0;
+}
+
+static void reg_reset(void)
+{
+    for (size_t i = 0; i < num; i++) {
+        if (!registry[i].secondary)
+            continue;
+
+        free(registry[i].secondary);
+        registry[i].secondary = NULL;
+    }
+    num = 0;
+}
+
+static int reg_show(const struct shell *shell)
+{
+    log("PRI  SEC ==============================================");
+    for (size_t i = 0; i < num; i++)
+        log("%3d  %s", registry[i].primary, registry[i].secondary);
+
+    return 0;
+}
 
 static int init_slaves(const struct shell *shell)
 {
@@ -279,37 +351,45 @@ static int ping_address(const struct shell *shell, mbus_frame *reply, int addres
     return rc;
 }
 
-static int mbus_scan_1st_address_range(const struct shell *shell)
+static int mbus_scan_primary_range(const struct shell *shell)
 {
-    int address;
-    int rc = 1;
-
-    for (address = 0; address <= MBUS_MAX_PRIMARY_SLAVES; address++) {
+    for (int addr = 0; addr <= MBUS_MAX_PRIMARY_SLAVES; addr++) {
 	mbus_frame reply;
 	int rc;
 
-	rc = ping_address(shell, &reply, address);
+	rc = ping_address(shell, &reply, addr);
 	if (rc == MBUS_RECV_RESULT_TIMEOUT)
 	    continue;
 
 	if (rc == MBUS_RECV_RESULT_INVALID) {
 	    mbus_purge_frames(handle);
-	    wrn("collision at address %d.", address);
+	    wrn("collision at address %d.", addr);
 	    continue;
 	}
 
 	if (mbus_frame_type(&reply) == MBUS_FRAME_TYPE_ACK) {
 	    if (mbus_purge_frames(handle)) {
-		wrn("collision at address %d.", address);
+		wrn("collision at address %d.", addr);
 		continue;
 	    }
 
-	    log("found an M-Bus device at address %d.", address);
+            if (mbus_send_request_frame(handle, addr) == -1) {
+                wrn("found %d, but failed querying its secondary address, %s", addr, mbus_error_str());
+                return 1;
+            }
+
+            if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK) {
+                wrn("found %d, but failed reading its secondary address, %s", addr, mbus_error_str());
+                return 1;
+            }
+
+            if (reg_add(mbus_frame_get_secondary_address(&reply), addr))
+                wrn("found %d, but failed extracting secondary address, %s", addr, mbus_error_str());
 	    rc = 0;
 	}
     }
 
-    return rc;
+    return reg_show(shell);
 }
 
 static int cmd_ping(const struct shell *shell, int argc, char *argv[])
@@ -348,7 +428,27 @@ static int scan_devices(const struct shell *shell, int argc, char *argv[])
     if (init_slaves(shell))
 	return -1;
 
-    return mbus_scan_1st_address_range(shell);
+    return mbus_scan_primary_range(shell);
+}
+
+static int found_device(const char *addr, const char *mask)
+{
+    mbus_frame reply;
+
+    if (mbus_send_request_frame(handle, MBUS_ADDRESS_NETWORK_LAYER) == -1) {
+	LOG_ERR("failed sending M-Bus request to %s.", addr);
+	return 1;
+    }
+
+    if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK) {
+	LOG_ERR("failed receiving M-Bus response from %s.", addr);
+	return 1;
+    }
+
+    if (reg_add(addr, reply.address))
+        LOG_INF("Found %s with address mask %s\n", addr, mask);
+
+    return 0;
 }
 
 static int probe_devices(const struct shell *shell, int argc, char *argv[])
@@ -364,7 +464,12 @@ static int probe_devices(const struct shell *shell, int argc, char *argv[])
     if (init_slaves(shell))
         return -1;
 
-    return mbus_scan_2nd_address_range(handle, 0, addr_mask);
+    if (mbus_probe_secondary_range(handle, 0, addr_mask, found_device)) {
+        wrn("failed probe, %s", mbus_error_str());
+        return 1;
+    }
+
+    return reg_show(shell);
 }
 
 static int set_address(const struct shell *shell, int argc, char *argv[])
@@ -431,6 +536,7 @@ static int set_address(const struct shell *shell, int argc, char *argv[])
     }
 
     dbg("primary address of device %s set to %d", mask, next);
+    reg_set_primary(mask, next);
 
     return 0;
 }
@@ -505,7 +611,17 @@ static int cmd_status(struct shell *shell, size_t argc, char **argv)
         return 1;
     }
 
-    shell_print(shell, "serial: %s", status);
+    shell_print(shell, "UART %s", status);
+    reg_show(shell);
+
+    return 0;
+}
+
+static int cmd_reset(const struct shell *shell, size_t argc, char **argv)
+{
+    mbus_serial_reset(handle);
+    reg_reset();
+
     return 0;
 }
 
@@ -591,6 +707,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
     SHELL_CMD_ARG(status,      NULL, "Probed devices, line status, etc.", cmd_status, 0, 0),
     SHELL_CMD(parity, &parity_cmds,  "Set line parity", NULL),
     SHELL_CMD(speed, &speed_cmds,    "Set line speed", NULL),
+    SHELL_CMD_ARG(reset,       NULL, "Clear registry, line settings, etc.", cmd_reset, 0, 0),
     SHELL_CMD_ARG(address,     NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
     SHELL_CMD_ARG(ping,        NULL, "Ping primary address", cmd_ping, 1, 1),
     SHELL_CMD_ARG(scan,        NULL, "Primary addresses scan", sh_scan_devices, 0, 0),

@@ -214,6 +214,13 @@ int mbus_serial_set_parity(mbus_handle *handle, int parity)
     return serial_line_set(handle);
 }
 
+int mbus_serial_reset(mbus_handle *handle)
+{
+    c_baudrate = DEFAULT_BAUDRATE;
+    c_parity   = DEFAULT_PARITY;
+
+    return serial_line_set(handle);
+}
 
 int mbus_serial_disconnect(mbus_handle *handle)
 {
