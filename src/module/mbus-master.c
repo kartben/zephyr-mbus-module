@@ -46,11 +46,11 @@
 #define NELEMS(v)    (sizeof(v) / sizeof(v[0]))
 #define ENABLED(v)   v ? "enabled" : "disabled"
 
-#define shell_dbg(s,f,a...)  if (debug) shell_print(s, f, ##a);
-#define err(fmt, args...)  { if (shell) shell_error(shell, fmt, ##args); else LOG_ERR(fmt, ##args); }
-#define wrn(fmt, args...)  { if (shell) shell_warn(shell, fmt, ##args);  else LOG_WRN(fmt, ##args); }
-#define dbg(fmt, args...)  { if (shell) {shell_dbg(shell, fmt, ##args);} else LOG_DBG(fmt, ##args); }
-#define log(fmt, args...)  { if (shell) shell_info(shell, fmt, ##args);  else LOG_INF(fmt, ##args); }
+#define shell_dbg(s,f,a...)  if (debug) shell_info(s, f, ##a);
+#define err(fmt, args...)    do { if (shell) shell_error(shell, fmt, ##args);  else LOG_ERR(fmt, ##args); } while(0)
+#define wrn(fmt, args...)    do { if (shell) shell_warn(shell,  fmt, ##args);  else LOG_WRN(fmt, ##args); } while(0)
+#define dbg(fmt, args...)    do { if (shell) {shell_dbg(shell,  fmt, ##args);} else LOG_DBG(fmt, ##args); } while(0)
+#define log(fmt, args...)    do { if (shell) shell_print(shell, fmt, ##args);  else LOG_INF(fmt, ##args); } while(0)
 
 LOG_MODULE_REGISTER(MODULE);
 
