@@ -37,7 +37,9 @@
 #if CONFIG_CAF
 #include <caf/events/module_state_event.h>
 #endif
+#include <posix/unistd.h>
 #include <stdio.h>
+
 #include "mbus/mbus.h"
 
 #define MBUS_DEVICE  "mbus0"
@@ -82,6 +84,7 @@ struct shell_cmd {
 static mbus_handle *handle;
 static int          debug;
 static int          verbose;
+static int          interactive;
 static int          xml;
 
 static int init_slaves(const struct shell *shell)
@@ -462,6 +465,13 @@ static int toggle_debug(const struct shell *shell, int argc, char *argv[])
     return 0;
 }
 
+static int cmd_interactive(const struct shell *shell, int argc, char *argv[])
+{
+    interactive ^= 1;
+    log("interactive mode %s", ENABLED(interactive));
+    return 0;
+}
+
 static int toggle_verbose(const struct shell *shell, int argc, char *argv[])
 {
     verbose ^= 1;
@@ -524,6 +534,8 @@ struct shell_cmd cmd = {
 
 static int work_submit(const struct shell *sh, int argc, char *argv[], int (*cb)(const struct shell *, int, char **))
 {
+    int timeout = 120;
+
     if (argc >= NELEMS(cmd.argv)) {
         shell_warn(sh, "Too many arguments to command!");
         return 1;
@@ -535,12 +547,16 @@ static int work_submit(const struct shell *sh, int argc, char *argv[], int (*cb)
     }
 
     cmd.cb = cb;
-    cmd.sh = sh;
+    cmd.sh = interactive ? sh : NULL;
     cmd.argc = argc;
     for (int i = 0; i < NELEMS(cmd.argv); i++)
         cmd.argv[i] = argv[i];
 
-    return k_work_submit_to_queue(&wq, &cmd.work);
+    k_work_submit_to_queue(&wq, &cmd.work);
+    while (interactive && k_work_busy_get(&cmd.work) && timeout--)
+        sleep(1);
+
+    return 0;
 }
 
 #define fnwrap(fn) static int _CONCAT(sh_,fn)(const struct shell *s, int c, char *v[]) { return work_submit(s, c, v, fn); }
@@ -554,13 +570,13 @@ fnwrap(toggle_verbose)
 fnwrap(toggle_xml)
 #endif /* CONFIG_CAF */
 
-SHELL_SUBCMD_DICT_SET_CREATE(sub_parity_cmds, cmd_set_parity,
+SHELL_SUBCMD_DICT_SET_CREATE(parity_cmds, cmd_set_parity,
 	(none, 0),
 	(odd,  1),
 	(even, 2)
 );
 
-SHELL_SUBCMD_DICT_SET_CREATE(sub_speed_cmds, cmd_set_speed,
+SHELL_SUBCMD_DICT_SET_CREATE(speed_cmds, cmd_set_speed,
 	(300,     300),
 	(600,     600),
 	(1200,   1200),
@@ -572,18 +588,19 @@ SHELL_SUBCMD_DICT_SET_CREATE(sub_speed_cmds, cmd_set_speed,
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
-    SHELL_CMD_ARG(diagnose,  NULL, "Diagnostic information, line status, etc.", cmd_diagnose, 0, 0),
-    SHELL_CMD(parity, &sub_parity_cmds, "Set line parity", NULL),
-    SHELL_CMD(speed, &sub_speed_cmds, "Set line speed", NULL),
-    SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
-    SHELL_CMD_ARG(ping,    NULL, "Ping primary address", cmd_ping, 1, 1),
-    SHELL_CMD_ARG(scan,    NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
-    SHELL_CMD_ARG(probe,   NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
-    SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD_ID]", sh_query_device, 2, 1),
-    SHELL_CMD_ARG(status,  NULL, "Show status of M-Bus module", sh_show_status, 0, 0),
-    SHELL_CMD_ARG(debug,   NULL, "Toggle debug mode", sh_toggle_debug, 0, 0),
-    SHELL_CMD_ARG(verbose, NULL, "Toggle verbose output (where applicable)", sh_toggle_verbose, 0, 0),
-    SHELL_CMD_ARG(xml,     NULL, "Toggle XML output", sh_toggle_xml, 0, 0),
+    SHELL_CMD_ARG(diagnose,    NULL, "Diagnostic information, line status, etc.", cmd_diagnose, 0, 0),
+    SHELL_CMD(parity, &parity_cmds,  "Set line parity", NULL),
+    SHELL_CMD(speed, &speed_cmds,    "Set line speed", NULL),
+    SHELL_CMD_ARG(address,     NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
+    SHELL_CMD_ARG(ping,        NULL, "Ping primary address", cmd_ping, 1, 1),
+    SHELL_CMD_ARG(scan,        NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
+    SHELL_CMD_ARG(probe,       NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
+    SHELL_CMD_ARG(request,     NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD_ID]", sh_query_device, 2, 1),
+    SHELL_CMD_ARG(status,      NULL, "Show status of M-Bus module", sh_show_status, 0, 0),
+    SHELL_CMD_ARG(debug,       NULL, "Toggle debug mode", sh_toggle_debug, 0, 0),
+    SHELL_CMD_ARG(interactive, NULL, "Toggle interactive mode", cmd_interactive, 0, 0),
+    SHELL_CMD_ARG(verbose,     NULL, "Toggle verbose output (where applicable)", sh_toggle_verbose, 0, 0),
+    SHELL_CMD_ARG(xml,         NULL, "Toggle XML output", sh_toggle_xml, 0, 0),
     SHELL_SUBCMD_SET_END
 );
 
