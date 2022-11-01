@@ -434,6 +434,16 @@ static int toggle_xml(const struct shell *shell, int argc, char *argv[])
 	return 0;
 }
 
+static int cmd_set_parity(const struct shell *shell, size_t argc, char **argv, void *data)
+{
+        return mbus_serial_set_parity(handle, (int)data);
+}
+
+static int cmd_set_speed(const struct shell *shell, size_t argc, char **argv, void *data)
+{
+        return mbus_serial_set_baudrate(handle, (int)data);
+}
+
 #ifndef CONFIG_CAF
 #define sh_set_address    set_address
 #define sh_scan_devices   scan_devices
@@ -489,11 +499,30 @@ fnwrap(toggle_verbose)
 fnwrap(toggle_xml)
 #endif /* CONFIG_CAF */
 
+SHELL_SUBCMD_DICT_SET_CREATE(sub_parity_cmds, cmd_set_parity,
+	(none, 0),
+	(odd,  1),
+	(even, 2)
+);
+
+SHELL_SUBCMD_DICT_SET_CREATE(sub_speed_cmds, cmd_set_speed,
+	(300,     300),
+	(600,     600),
+	(1200,   1200),
+	(2400,   2400),
+	(4800,   4800),
+	(9600,   9600),
+	(19200, 19200),
+	(38400, 38400)
+);
+
 SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
+    SHELL_CMD(parity, &sub_parity_cmds, "Set line parity", NULL),
+    SHELL_CMD(speed, &sub_speed_cmds, "Set line speed", NULL),
     SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
     SHELL_CMD_ARG(scan,    NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
     SHELL_CMD_ARG(probe,   NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
-    SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD ID]", sh_query_device, 2, 1),
+    SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD_ID]", sh_query_device, 2, 1),
     SHELL_CMD_ARG(status,  NULL, "Show status of M-Bus module", sh_show_status, 0, 0),
     SHELL_CMD_ARG(debug,   NULL, "Toggle debug mode", sh_toggle_debug, 0, 0),
     SHELL_CMD_ARG(verbose, NULL, "Toggle verbose output (where applicable)", sh_toggle_verbose, 0, 0),
