@@ -441,16 +441,16 @@ static int found_device(void *arg, const char *addr, const char *mask)
 
     if (mbus_send_request_frame(handle, MBUS_ADDRESS_NETWORK_LAYER) == -1) {
 	err("failed sending M-Bus request to %s.", addr);
-	return 1;
+	return 0;
     }
 
     if (mbus_recv_frame(handle, &reply) != MBUS_RECV_RESULT_OK) {
 	err("failed receiving M-Bus response from %s.", addr);
-	return 1;
+	return 0;
     }
 
     if (reg_add(addr, reply.address))
-        log("Found %s with address mask %s\n", addr, mask);
+        log("Found %s with address mask %s", addr, mask);
 
     return 0;
 }
