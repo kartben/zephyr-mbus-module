@@ -156,6 +156,20 @@ static int serial_line_set(mbus_handle *handle)
     return 0;
 }
 
+int mbus_serial_diag(mbus_handle *handle, char *buf, size_t len)
+{
+    struct uart_config uc;
+
+    if (uart_config_get(dev, &uc))
+        return -1;
+
+    snprintf(buf, len, "%u %d%c%d", uc.baudrate, uc.data_bits + 5,
+             (uc.parity == UART_CFG_PARITY_NONE ? 'N' :
+              (uc.parity == UART_CFG_PARITY_EVEN ? 'E' : 'O')),
+              uc.stop_bits == UART_CFG_STOP_BITS_1 ? 1 : 2);
+    return 0;
+}
+
 int mbus_serial_connect(mbus_handle *handle)
 {
     if (handle == NULL)

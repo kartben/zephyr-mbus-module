@@ -47,6 +47,11 @@
 LOG_MODULE_REGISTER(MODULE);
 
 /*
+ * Local forward declarations
+ */
+extern int mbus_serial_diag(mbus_handle *handle, char *buf, size_t len);
+
+/*
  * Work queue for processing M-Bus commands when using nRF CAF
  */
 #if CONFIG_CAF
@@ -444,6 +449,19 @@ static int cmd_set_speed(const struct shell *shell, size_t argc, char **argv, vo
     return mbus_serial_set_baudrate(handle, (int)data);
 }
 
+static int cmd_diagnose(const struct shell *shell, size_t argc, char **argv)
+{
+    char status[32];
+
+    if (mbus_serial_diag(handle, status, sizeof(status))) {
+        shell_warn(shell, "Not connected.");
+        return 1;
+    }
+
+    shell_print(shell, "serial: %s", status);
+    return 0;
+}
+
 #ifndef CONFIG_CAF
 #define sh_set_address    set_address
 #define sh_scan_devices   scan_devices
@@ -517,6 +535,7 @@ SHELL_SUBCMD_DICT_SET_CREATE(sub_speed_cmds, cmd_set_speed,
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
+    SHELL_CMD_ARG(diagnose,  NULL, "Diagnostic information, line status, etc.", cmd_diagnose, 0, 0),
     SHELL_CMD(parity, &sub_parity_cmds, "Set line parity", NULL),
     SHELL_CMD(speed, &sub_speed_cmds, "Set line speed", NULL),
     SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
