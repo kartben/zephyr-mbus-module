@@ -89,7 +89,7 @@ static int          xml;
 
 static int init_slaves(const struct shell *shell)
 {
-    log("sending ping frames to wake up devices ...");
+    dbg("sending ping frames to wake up devices ...");
     if (mbus_send_ping_frame(handle, MBUS_ADDRESS_NETWORK_LAYER, 1) == -1)
 	goto fail;
 
@@ -104,7 +104,7 @@ fail:
 
 static int secondary_select(const struct shell *shell, char *mask)
 {
-    log("sending secondary select for mask %s", mask);
+    dbg("sending secondary select for mask %s", mask);
 
     switch (mbus_select_secondary_address(handle, mask)) {
     case MBUS_PROBE_COLLISION:
