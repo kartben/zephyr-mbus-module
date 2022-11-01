@@ -303,6 +303,37 @@ static int mbus_scan_1st_address_range(const struct shell *shell)
     return rc;
 }
 
+static int cmd_ping(const struct shell *shell, int argc, char *argv[])
+{
+    mbus_frame reply;
+    int address;
+    int rc;
+
+    address = atoi(argv[1]);
+    if (address < 0 || address >= 250) {
+        shell_warn(shell, "invalid or reserved address [0,250]");
+        return 1;
+    }
+
+    rc = ping_address(shell, &reply, address);
+    switch (rc) {
+    case MBUS_RECV_RESULT_OK:
+        shell_print(shell, "Reply from address %d.", address);
+        break;
+    case MBUS_RECV_RESULT_TIMEOUT:
+        shell_warn(shell, "No response address %d.", address);
+        break;
+    case MBUS_RECV_RESULT_INVALID:
+        mbus_purge_frames(handle);
+        shell_warn(shell, "Collision detected, multiple device response.");
+        break;
+    default:
+        break;
+    }
+
+    return rc;
+}
+
 static int scan_devices(const struct shell *shell, int argc, char *argv[])
 {
     if (init_slaves(shell))
@@ -539,6 +570,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(module_shell,
     SHELL_CMD(parity, &sub_parity_cmds, "Set line parity", NULL),
     SHELL_CMD(speed, &sub_speed_cmds, "Set line speed", NULL),
     SHELL_CMD_ARG(address, NULL, "Set primary address from secondary (mask) or current primary address.\nUsage: address <MASK | ADDR> NEW_ADDR", sh_set_address, 3, 0),
+    SHELL_CMD_ARG(ping,    NULL, "Ping primary address", cmd_ping, 1, 1),
     SHELL_CMD_ARG(scan,    NULL, "Primary addresses scan", sh_scan_devices, 0, 0),
     SHELL_CMD_ARG(probe,   NULL, "Secondary addresses scan", sh_probe_devices, 0, 0),
     SHELL_CMD_ARG(request, NULL, "Request data, full XML or single record.\nUsage: request <MASK | ADDR> [RECORD_ID]", sh_query_device, 2, 1),
