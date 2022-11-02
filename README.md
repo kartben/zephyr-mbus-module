@@ -25,7 +25,7 @@ slightly more complex `main()` function, but otoh you don't need to call
 
 #include <zephyr/logging/log.h>
 #include <caf/events/module_state_event.h>
-#include <mbus/mbus.h>
+#include <zephyr/settings/settings.h>
 
 LOG_MODULE_REGISTER(MODULE);
 
@@ -36,6 +36,9 @@ int main(void)
         LOG_ERR("Application Event Manager not initialized!");
         return 1;
     }
+
+    settings_subsys_init();
+    settings_load();
 
     LOG_DBG("Event manager initialized.");
     module_set_state(MODULE_STATE_READY);

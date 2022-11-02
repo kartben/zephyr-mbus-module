@@ -36,6 +36,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
+#include <zephyr/settings/settings.h>
 
 #include <stdio.h>
 #include <strings.h>
@@ -74,6 +75,9 @@ static int    rx_pos;
 /* queue to store up to 10 messages (aligned to 4-byte boundary) */
 K_MSGQ_DEFINE(mbus_mq, sizeof(mbus_frame), 10, 4);
 
+/*
+ * ISR
+ */
 static void uart_isr(const struct device *dev, void *data)
 {
     while (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
@@ -152,6 +156,9 @@ static int serial_line_set(mbus_handle *handle)
 	timeout = 3410000 / c_baudrate;
     else
 	timeout = 3410000 / 38400;
+
+    settings_save_one("mbus/line/speed", &c_baudrate, sizeof(c_baudrate));
+    settings_save_one("mbus/line/parity", &c_parity, sizeof(c_parity));
 
     return 0;
 }
@@ -295,6 +302,37 @@ int mbus_serial_recv_frame(mbus_handle *handle, mbus_frame *frame)
 
     return MBUS_RECV_RESULT_OK;
 }
+
+/*
+ * Settings
+ */
+static int set(const char *name, const char *key, void *data, int len, settings_read_cb cb, void *arg)
+{
+    const char *next;
+
+    if (settings_name_steq(name, key, &next) && !next) {
+        (void)cb(arg, data, len);
+        LOG_HEXDUMP_INF(data, len, name);
+        return 0;
+    }
+
+    return -1;
+}
+
+#define SET_TO(setting, dst) \
+    (set(name, setting, &dst, sizeof(dst), read_cb, cb_arg) == 0)
+
+static int mbus_line_set(const char *name, size_t len, settings_read_cb read_cb, void *cb_arg)
+{
+    if (SET_TO("speed", c_baudrate))
+        return 0;
+    if (SET_TO("parity", c_parity))
+        return 0;
+
+    return -1;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(mbus, "mbus/line", NULL, mbus_line_set, NULL, NULL);
 
 /**
  * Local Variables:
