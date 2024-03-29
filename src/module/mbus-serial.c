@@ -30,13 +30,12 @@
  */
 
 #include <autoconf.h>
-#include <zephyr/zephyr.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
-#include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/ring_buffer.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/sys/ring_buffer.h>
 
 #include <stdio.h>
 #include <strings.h>

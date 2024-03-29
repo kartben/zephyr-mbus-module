@@ -30,15 +30,15 @@
  */
 #define MODULE mbus
 
-#include <zephyr/zephyr.h>
 #include <zephyr/drivers/uart.h>
-#include <zephyr/shell/shell.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/shell/shell.h>
 #if CONFIG_CAF
 #include <caf/events/module_state_event.h>
 #endif
-#include <posix/unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "mbus/mbus.h"
 extern char *fs_strdup(const char *str);
@@ -684,20 +684,20 @@ fnwrap(query_device)
 #endif /* CONFIG_CAF */
 
 SHELL_SUBCMD_DICT_SET_CREATE(parity_cmds, cmd_set_parity,
-	(none, 0),
-	(odd,  1),
-	(even, 2)
+	(none, 0, "none"),
+	(odd,  1, "odd"),
+	(even, 2, "even")
 );
 
 SHELL_SUBCMD_DICT_SET_CREATE(speed_cmds, cmd_set_speed,
-	(300,     300),
-	(600,     600),
-	(1200,   1200),
-	(2400,   2400),
-	(4800,   4800),
-	(9600,   9600),
-	(19200, 19200),
-	(38400, 38400)
+	(300,     300,   "300"),
+	(600,     600,   "600"),
+    (1200,   1200,  "1200"),
+    (2400,   2400,  "2400"),
+    (4800,   4800,  "4800"),
+    (9600,   9600,  "9600"),
+    (19200, 19200, "19200"),
+    (38400, 38400, "38400")
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(mbus_set,
